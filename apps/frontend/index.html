@@ -33,6 +33,14 @@
         .prob-low {
             color: #ff4444;
         }
+
+        .status-live {
+            color: #00ff88;
+        }
+
+        .status-stale {
+            color: #ff4444;
+        }
     </style>
 </head>
 
@@ -60,6 +68,11 @@
         <div id="signal" class="value">-</div>
     </div>
 
+    <div class="card">
+        <div>Status</div>
+        <div id="status" class="value">-</div>
+    </div>
+
 <script>
 async function fetchPrediction() {
     try {
@@ -71,6 +84,9 @@ async function fetchPrediction() {
             return;
         }
 
+        // ---------------------------
+        // BASIC VALUES
+        // ---------------------------
         document.getElementById("timestamp").innerText = data.timestamp;
         document.getElementById("low").innerText = Number(data.low_so_far).toFixed(2);
 
@@ -80,7 +96,7 @@ async function fetchPrediction() {
         probElement.innerText = prob.toFixed(3);
 
         // ---------------------------
-        // SIGNAL LOGIC (important)
+        // SIGNAL LOGIC
         // ---------------------------
         let signal = "";
 
@@ -95,7 +111,27 @@ async function fetchPrediction() {
             probElement.className = "value prob-low";
         }
 
-        document.getElementById("signal").innerText = signal;
+        // ---------------------------
+        // STATUS + STALENESS
+        // ---------------------------
+        let statusText = "";
+        let statusElement = document.getElementById("status");
+
+        if (data.status === "LIVE") {
+            statusText = "LIVE DATA";
+            statusElement.className = "value status-live";
+        } else {
+            let mins = Number(data.minutes_since_last_update).toFixed(1);
+            statusText = "STALE (" + mins + " min old)";
+            statusElement.className = "value status-stale";
+        }
+
+        statusElement.innerText = statusText;
+
+        // ---------------------------
+        // COMBINED SIGNAL (IMPORTANT)
+        // ---------------------------
+        document.getElementById("signal").innerText = signal + " | " + data.status;
 
     } catch (err) {
         document.getElementById("signal").innerText = "API Error";

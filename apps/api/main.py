@@ -4,6 +4,7 @@ import yfinance as yf
 
 from core.models.live_pipeline import run_live_pipeline
 from fastapi.middleware.cors import CORSMiddleware
+from datetime import datetime, timezone
 
 app = FastAPI()
 
@@ -59,7 +60,20 @@ def predict():
         # RUN PIPELINE
         # ---------------------------
         result = run_live_pipeline(df)
+        # ---------------------------
+        # ADD STALENESS CHECK
+        # ---------------------------
+        latest_time = df["timestamp"].iloc[-1]
+        now = datetime.now(timezone.utc)
 
+        minutes_diff = (now - latest_time).total_seconds() / 60
+
+        result["minutes_since_last_update"] = round(minutes_diff, 2)
+
+        if minutes_diff > 5:
+            result["status"] = "MARKET_CLOSED_OR_STALE"
+        else:
+            result["status"] = "LIVE"
         return result
 
     except Exception as e:
