@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>SPY Low Predictor</title>
+    <style>
+        body {
+            font-family: Arial;
+            padding: 20px;
+            background-color: #111;
+            color: #eee;
+        }
+
+        .card {
+            background: #222;
+            padding: 20px;
+            margin-bottom: 20px;
+            border-radius: 8px;
+        }
+
+        .value {
+            font-size: 24px;
+            margin-top: 10px;
+        }
+
+        .prob-high {
+            color: #00ff88;
+        }
+
+        .prob-medium {
+            color: #ffaa00;
+        }
+
+        .prob-low {
+            color: #ff4444;
+        }
+    </style>
+</head>
+
+<body>
+
+    <h1>SPY Intraday Low Predictor</h1>
+
+    <div class="card">
+        <div>Timestamp</div>
+        <div id="timestamp" class="value">-</div>
+    </div>
+
+    <div class="card">
+        <div>Low So Far</div>
+        <div id="low" class="value">-</div>
+    </div>
+
+    <div class="card">
+        <div>Probability</div>
+        <div id="prob" class="value">-</div>
+    </div>
+
+    <div class="card">
+        <div>Signal</div>
+        <div id="signal" class="value">-</div>
+    </div>
+
+<script>
+async function fetchPrediction() {
+    try {
+        const res = await fetch("http://127.0.0.1:8000/predict");
+        const data = await res.json();
+
+        if (data.error) {
+            document.getElementById("signal").innerText = data.error;
+            return;
+        }
+
+        document.getElementById("timestamp").innerText = data.timestamp;
+        document.getElementById("low").innerText = Number(data.low_so_far).toFixed(2);
+
+        let prob = Number(data.probability);
+        let probElement = document.getElementById("prob");
+
+        probElement.innerText = prob.toFixed(3);
+
+        // ---------------------------
+        // SIGNAL LOGIC (important)
+        // ---------------------------
+        let signal = "";
+
+        if (prob > 0.75) {
+            signal = "LOW LIKELY SET";
+            probElement.className = "value prob-high";
+        } else if (prob > 0.55) {
+            signal = "UNCERTAIN";
+            probElement.className = "value prob-medium";
+        } else {
+            signal = "LOW NOT SET";
+            probElement.className = "value prob-low";
+        }
+
+        document.getElementById("signal").innerText = signal;
+
+    } catch (err) {
+        document.getElementById("signal").innerText = "API Error";
+    }
+}
+
+// refresh every 10 seconds
+setInterval(fetchPrediction, 10000);
+
+// initial load
+fetchPrediction();
+</script>
+
+</body>
+</html>
