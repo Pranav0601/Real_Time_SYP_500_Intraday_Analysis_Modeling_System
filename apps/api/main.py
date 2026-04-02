@@ -1,14 +1,15 @@
 from fastapi import FastAPI
-import pandas as pd
-import yfinance as yf
-
-from core.models.live_pipeline import run_live_pipeline
 from fastapi.middleware.cors import CORSMiddleware
 from datetime import datetime, timezone
+
+from core.db.read import get_latest_prediction, get_last_n_predictions
 
 app = FastAPI()
 
 
+# ---------------------------
+# CORS
+# ---------------------------
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -18,52 +19,26 @@ app.add_middleware(
 )
 
 
+# ---------------------------
+# HEALTH
+# ---------------------------
 @app.get("/health")
 def health():
     return {"status": "ok"}
 
 
+# ---------------------------
+# PREDICT (FROM DB)
+# ---------------------------
 @app.get("/predict")
 def predict():
     try:
-        # ---------------------------
-        # FETCH LIVE DATA
-        # ---------------------------
-        df = yf.download("SPY", interval="1m", period="1d")
+        result = get_latest_prediction()
 
-        if df.empty:
-            return {"error": "No data fetched"}
+        if not result:
+            return {"error": "No data in database yet"}
 
-        df = df.reset_index()
-
-        # ---------------------------
-        # FLATTEN COLUMNS (IMPORTANT FIX)
-        # ---------------------------
-        if isinstance(df.columns, pd.MultiIndex):
-            df.columns = df.columns.get_level_values(0)
-
-        # ---------------------------
-        # NOW RENAME
-        # ---------------------------
-        df.rename(columns={
-            "Datetime": "timestamp",
-            "Open": "open_spy",
-            "High": "high_spy",
-            "Low": "low_spy",
-            "Close": "close_spy",
-            "Volume": "volume_spy"
-        }, inplace=True)
-
-        df["timestamp"] = pd.to_datetime(df["timestamp"])
-
-        # ---------------------------
-        # RUN PIPELINE
-        # ---------------------------
-        result = run_live_pipeline(df)
-        # ---------------------------
-        # ADD STALENESS CHECK
-        # ---------------------------
-        latest_time = df["timestamp"].iloc[-1]
+        latest_time = datetime.fromisoformat(result["timestamp"]).replace(tzinfo=timezone.utc)
         now = datetime.now(timezone.utc)
 
         minutes_diff = (now - latest_time).total_seconds() / 60
@@ -74,7 +49,25 @@ def predict():
             result["status"] = "MARKET_CLOSED_OR_STALE"
         else:
             result["status"] = "LIVE"
+
         return result
+
+    except Exception as e:
+        return {"error": str(e)}
+
+
+@app.get("/history")
+def history(limit: int = 50):
+    try:
+        data = get_last_n_predictions(limit)
+
+        if not data:
+            return {"error": "No history available"}
+
+        return {
+            "count": len(data),
+            "data": data
+        }
 
     except Exception as e:
         return {"error": str(e)}
