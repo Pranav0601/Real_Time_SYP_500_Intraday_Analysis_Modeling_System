@@ -1,0 +1,60 @@
+body {
+    font-family: Arial;
+    margin: 0;
+    background-color: #0d1117;
+    color: #e6edf3;
+}
+
+.header {
+    background: #161b22;
+    padding: 20px;
+    font-size: 26px;
+    text-align: center;
+    border-bottom: 1px solid #30363d;
+}
+
+.main {
+    display: flex;
+    height: calc(100vh - 80px);
+}
+
+.left {
+    width: 35%;
+    padding: 20px;
+}
+
+.right {
+    width: 65%;
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.card {
+    background: #161b22;
+    padding: 20px;
+    border-radius: 10px;
+    border: 1px solid #30363d;
+}
+
+.label {
+    font-size: 14px;
+    color: #8b949e;
+}
+
+.value {
+    font-size: 24px;
+    margin-top: 10px;
+}
+
+.chart-container {
+    height: 45%;
+}
+
+.prob-high { color: #2ecc71; }
+.prob-medium { color: #f39c12; }
+.prob-low { color: #e74c3c; }
+
+.status-live { color: #2ecc71; }
+.status-stale { color: #f39c12; }

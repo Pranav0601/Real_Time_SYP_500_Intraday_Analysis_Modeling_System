@@ -1,6 +1,8 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from datetime import datetime, timezone
+import pandas as pd
+import yfinance as yf
 
 from core.db.read import get_latest_prediction, get_last_n_predictions
 
@@ -67,6 +69,49 @@ def history(limit: int = 50):
         return {
             "count": len(data),
             "data": data
+        }
+
+    except Exception as e:
+        return {"error": str(e)}
+    
+# ---------------------------
+# NEW: MARKET DATA ENDPOINT
+# ---------------------------
+@app.get("/market")
+def market():
+    try:
+        df = yf.download("SPY", interval="1m", period="1d")
+        if df.empty:
+            return {"error": "No market data"}
+
+        df = df.reset_index()
+
+        # flatten columns if needed
+        if isinstance(df.columns, pd.MultiIndex):
+            df.columns = df.columns.get_level_values(0)
+
+        df.rename(columns={
+            "Datetime": "timestamp",
+            "Open": "open",
+            "High": "high",
+            "Low": "low",
+            "Close": "close",
+            "Volume": "volume"
+        }, inplace=True)
+
+        df["timestamp"] = pd.to_datetime(df["timestamp"])
+
+        # return last ~200 points
+        df = df.tail(200)
+
+        return {
+            "data": [
+                {
+                    "timestamp": str(row["timestamp"]),
+                    "close": float(row["close"])
+                }
+                for _, row in df.iterrows()
+            ]
         }
 
     except Exception as e:
